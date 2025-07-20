@@ -36,7 +36,7 @@ public class SqlConnectionFactoryTests
 
         Assert.Single(ssm.Invocations);
         ssm.Verify(
-            s => s.GetParameterAsync(It.Is<GetParameterRequest>(r => r.Name == path && r.WithDecryption),
+            s => s.GetParameterAsync(It.Is<GetParameterRequest>(r => r.Name == path && r.WithDecryption == true),
                 It.IsAny<CancellationToken>()), Times.Once);
     }
 }
