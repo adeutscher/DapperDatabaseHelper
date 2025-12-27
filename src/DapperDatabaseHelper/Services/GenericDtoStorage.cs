@@ -24,6 +24,17 @@ public class GenericDtoStorage<TDto, TKey>(
     : IGenericDtoStorage<TDto, TKey> where TDto : class
 
 {
+    /// <summary>
+    ///     Central location for quoting names.
+    ///     If you wanted to switch this class to support MSSQL, then this would be the place.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    private static string QuoteString(string name)
+    {
+        return $"`{name}`";
+    }
+
     private IEnumerable<string> GetFieldNames(bool excludeKey = false)
     {
         var keyField = excludeKey ? string.Empty : GetKeyFieldName(); // Fetch once, if needed at all
@@ -55,10 +66,10 @@ public class GenericDtoStorage<TDto, TKey>(
 
         var fields = GetFieldNames().ToList();
 
-        var fieldFields = string.Join(",", fields.Select(f => $"`{f}`"));
+        var fieldFields = string.Join(",", fields.Select(QuoteString));
         var valueFields = string.Join(",", fields.Select(f => $"@{f}"));
 
-        var query = $"INSERT INTO `{GetTableName()}` ({fieldFields}) VALUES ({valueFields});";
+        var query = $"INSERT INTO {QuoteString(GetTableName())} ({fieldFields}) VALUES ({valueFields});";
 
         await policy.ExecuteAsync(() => dbConnection.ExecuteAsync(query, itemTemplate));
 
@@ -89,10 +100,10 @@ public class GenericDtoStorage<TDto, TKey>(
             }
 
             changed = true;
-            builder.Set($"{property.Name}=@{property.Name}", newDto);
+            builder.Set($"{QuoteString(property.Name)}=@{property.Name}", newDto);
         }
 
-        builder.Where($"{keyName}=@key", new
+        builder.Where($"{QuoteString(keyName)}=@key", new
         {
             key = GetKeyFieldValue(oldDto)
         });
@@ -104,7 +115,7 @@ public class GenericDtoStorage<TDto, TKey>(
         }
 
         var policy = PolicyHelper.GetRetryPolicy(logger);
-        var template = builder.AddTemplate($"UPDATE `{GetTableName()}` /**set**/ /**where**/");
+        var template = builder.AddTemplate($"UPDATE {QuoteString(GetTableName())} /**set**/ /**where**/");
         await policy.ExecuteAsync(() => dbConnection.ExecuteAsync(template.RawSql, template.Parameters));
 
         return (await GetByKeyAsync(dbConnection, GetKeyFieldValue(newDto), cancellationToken))!;
@@ -120,7 +131,7 @@ public class GenericDtoStorage<TDto, TKey>(
     {
         var policy = PolicyHelper.GetRetryPolicy(logger);
 
-        var query = $"SELECT * FROM `{GetTableName()}` WHERE `{GetKeyFieldName()}` = @entryId";
+        var query = $"SELECT * FROM {QuoteString(GetTableName())} WHERE {QuoteString(GetKeyFieldName())} = @entryId";
         var response = await policy.ExecuteAsync(() => dbConnection.QueryFirstOrDefaultAsync<TDto>(query, new
         {
             entryId
@@ -142,8 +153,8 @@ public class GenericDtoStorage<TDto, TKey>(
         using var dbConnection = await sqlConnectionFactory.GetConnectionAsync();
 
         var builder = new SqlBuilder();
-        builder.Where($"{GetKeyFieldName()}=@key", new {key});
-        var template = builder.AddTemplate($"DELETE FROM `{GetTableName()}` /**where**/");
+        builder.Where($"{QuoteString(GetKeyFieldName())}=@key", new {key});
+        var template = builder.AddTemplate($"DELETE FROM {QuoteString(GetTableName())} /**where**/");
         var result = await policy.ExecuteAsync(() => dbConnection.ExecuteAsync(template.RawSql, template.Parameters));
         return result == 1;
     }
