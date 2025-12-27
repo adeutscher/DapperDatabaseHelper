@@ -1,7 +1,9 @@
 using Dapper;
-using DapperDatabaseHelper.Abstractions.Attributes;
+using DapperDatabaseHelper.Exceptions;
 using DapperDatabaseHelper.Utility;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Reflection;
 
@@ -28,12 +30,22 @@ public class GenericDtoStorage<TDto, TKey>(
 
         return typeof(TDto).GetProperties()
             .Where(p => !excludeKey || !keyField.Equals(p.Name))
-            .Select(p => p.Name);
+            .Select(p =>
+            {
+                var columnAttribute = p.GetCustomAttribute<ColumnAttribute>();
+                if (columnAttribute is not null && !string.IsNullOrWhiteSpace(columnAttribute.Name))
+                {
+                    // Return name as specified in Column attribute
+                    return columnAttribute.Name;
+                }
+
+                return p.Name;
+            });
     }
 
     private static string GetTableName()
     {
-        return typeof(TDto).GetCustomAttributes<DbTableAttribute>().FirstOrDefault()?.Name ?? typeof(TDto).Name;
+        return typeof(TDto).GetCustomAttributes<TableAttribute>().FirstOrDefault()?.Name ?? typeof(TDto).Name;
     }
 
     private async Task<TDto> InsertAsync(IDbConnection dbConnection, TDto itemTemplate,
@@ -120,7 +132,8 @@ public class GenericDtoStorage<TDto, TKey>(
     private static PropertyInfo GetKeyProperty()
     {
         return typeof(TDto).GetProperties()
-            .FirstOrDefault(p => p.GetCustomAttributes(typeof(DbKeyAttribute)).Any()) ?? throw new Exception();
+                   .FirstOrDefault(p => p.GetCustomAttributes(typeof(KeyAttribute)).Any()) ??
+               throw new CouldNotLocateKeyException();
     }
 
     public async Task<bool> DeleteByKeyAsync(TKey key, CancellationToken cancellationToken = default)
