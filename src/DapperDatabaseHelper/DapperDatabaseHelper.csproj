@@ -7,11 +7,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Dapper" Version="2.1.66"/>
+        <PackageReference Include="Dapper" Version="2.1.79" />
         <PackageReference Include="Dapper.SqlBuilder" Version="2.1.66"/>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1"/>
-        <PackageReference Include="MySql.Data" Version="9.5.0"/>
-        <PackageReference Include="Polly" Version="8.6.5"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+        <PackageReference Include="MySql.Data" Version="9.7.0" />
+        <PackageReference Include="Polly" Version="8.7.0" />
     </ItemGroup>
 
     <ItemGroup>
